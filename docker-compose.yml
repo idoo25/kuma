@@ -1,0 +1,23 @@
+version: '3.8'
+
+services:
+  uptime-pusher:
+    build: ./pusher
+    container_name: uptime-pusher
+    restart: unless-stopped
+    environment:
+    - FIREBASE_PROJECT_ID=my-uptime-monitor
+    - FIREBASE_API_KEY=AIzaSyAdBEEyApYCeazbF5xe0zv7ozOFsJ1p-rU
+    - FIREBASE_AUTH_DOMAIN=my-uptime-monitor.firebaseapp.com
+    - FIREBASE_STORAGE_BUCKET=my-uptime-monitor.firebasestorage.app
+    - FIREBASE_MESSAGING_SENDER_ID=647025345804
+    - FIREBASE_APP_ID=1:647025345804:web:bb477d61c12a432dd27529
+    volumes:
+      # אם יש לך service account key, הוסף אותו כאן
+      - ./pusher/firebase-key.json:/app/firebase-key.json:ro
+    networks:
+      - monitoring
+
+networks:
+  monitoring:
+    driver: bridge

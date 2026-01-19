@@ -110,6 +110,13 @@ const Icons = {
       <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
     </svg>
   ),
+  Refresh: () => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <polyline points="23 4 23 10 17 10"></polyline>
+      <polyline points="1 20 1 14 7 14"></polyline>
+      <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+    </svg>
+  ),
 };
 
 function App() {
@@ -118,6 +125,8 @@ function App() {
   const [selectedMonitor, setSelectedMonitor] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [theme, setTheme] = useState(() => localStorage.getItem('theme') || 'light');
+  const [lastUpdate, setLastUpdate] = useState(null);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
@@ -134,6 +143,7 @@ function App() {
       }));
       setMonitors(data);
       calculateStats(data);
+      setLastUpdate(new Date());
       if (data.length > 0 && !selectedMonitor) {
         const unique = getUniqueMonitorsFromData(data);
         setSelectedMonitor(unique[0]?.name);
@@ -141,6 +151,20 @@ function App() {
     });
     return () => unsubscribe();
   }, []);
+
+  const handleRefresh = () => {
+    setIsRefreshing(true);
+    // The data auto-refreshes via onSnapshot, but we show a visual feedback
+    setTimeout(() => {
+      setLastUpdate(new Date());
+      setIsRefreshing(false);
+    }, 1000);
+  };
+
+  const formatLastUpdate = (date) => {
+    if (!date) return '';
+    return date.toLocaleTimeString();
+  };
 
   const calculateStats = (data) => {
     const latest = {};
@@ -217,6 +241,19 @@ function App() {
           </nav>
         </div>
         <div className="header-right">
+          {lastUpdate && (
+            <span className="last-update">
+              Last update: {formatLastUpdate(lastUpdate)}
+            </span>
+          )}
+          <button
+            className={`btn-refresh ${isRefreshing ? 'spinning' : ''}`}
+            onClick={handleRefresh}
+            disabled={isRefreshing}
+          >
+            <Icons.Refresh />
+            {isRefreshing ? 'Refreshing...' : 'Refresh'}
+          </button>
           <button className="header-btn" onClick={() => setTheme(t => t === 'dark' ? 'light' : 'dark')}>
             {theme === 'dark' ? <Icons.Sun /> : <Icons.Moon />}
           </button>

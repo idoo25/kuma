@@ -171,7 +171,58 @@ body {
   align-items: center;
   height: 100%;
   padding-right: 8px;
-  gap: 4px;
+  gap: 12px;
+}
+
+.last-update {
+  font-size: 0.8rem;
+  color: rgba(255, 255, 255, 0.85);
+  white-space: nowrap;
+}
+
+.btn-refresh {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  color: white;
+  border: none;
+  padding: 6px 14px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 0.8rem;
+  transition: all 0.3s;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.btn-refresh:hover:not(:disabled) {
+  background: linear-gradient(135deg, #059669 0%, #047857 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+}
+
+.btn-refresh:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.btn-refresh:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.btn-refresh svg {
+  width: 14px;
+  height: 14px;
+}
+
+.btn-refresh.spinning svg {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
 }
 
 .header-btn {

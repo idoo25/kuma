@@ -440,15 +440,23 @@ function MonitorDetail({ name, data, calculateUptime, calculateAvgPing }) {
   const latest = data[0];
   const currentPing = latest.ping || 0;
 
-  // Use stats from Firebase if available, otherwise calculate locally
-  const stats24h = latest.stats_24h || {
-    uptime_percentage: calculateUptime(data),
-    avg_response_time: calculateAvgPing(data),
+  // Calculate stats locally from the data we have
+  const pings = data.map(d => d.ping || 0).filter(p => p > 0);
+  const upCount = data.filter(d => d.status === 'up').length;
+  const downCount = data.filter(d => d.status === 'down').length;
+
+  const stats24h = {
+    uptime_percentage: data.length > 0 ? ((upCount / data.length) * 100).toFixed(2) : 0,
+    avg_response_time: pings.length > 0 ? Math.round(pings.reduce((a, b) => a + b, 0) / pings.length) : 0,
     total_checks: data.length,
-    successful_checks: data.filter(d => d.status === 'up').length
+    successful_checks: upCount,
+    failed_checks: downCount,
+    min_response_time: pings.length > 0 ? Math.round(Math.min(...pings)) : 0,
+    max_response_time: pings.length > 0 ? Math.round(Math.max(...pings)) : 0
   };
 
-  const stats30d = latest.stats_30d || stats24h;
+  // Use Firebase stats_30d if available, otherwise use 24h stats
+  const stats30d = latest.stats_30d?.uptime_percentage > 0 ? latest.stats_30d : stats24h;
 
   // SSL Certificate info
   const sslCert = latest.ssl_certificate;

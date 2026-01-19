@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { initializeApp } from 'firebase/app';
-import { getFirestore, collection, query, orderBy, limit, onSnapshot } from 'firebase/firestore';
+import { getFirestore, collection, query, orderBy, limit, getDocs } from 'firebase/firestore';
 import './App.css';
 
 const firebaseConfig = {
@@ -133,9 +133,11 @@ function App() {
     localStorage.setItem('theme', theme);
   }, [theme]);
 
-  useEffect(() => {
-    const q = query(collection(db, 'monitors'), orderBy('timestamp', 'desc'), limit(500));
-    const unsubscribe = onSnapshot(q, (snapshot) => {
+  const fetchData = async () => {
+    setIsRefreshing(true);
+    try {
+      const q = query(collection(db, 'monitors'), orderBy('timestamp', 'desc'), limit(500));
+      const snapshot = await getDocs(q);
       const data = snapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data(),
@@ -148,27 +150,30 @@ function App() {
         const unique = getUniqueMonitorsFromData(data);
         setSelectedMonitor(unique[0]?.name);
       }
-    });
-    return () => unsubscribe();
-  }, []);
-
-  const handleRefresh = () => {
-    setIsRefreshing(true);
-    // The data auto-refreshes via onSnapshot, but we show a visual feedback
-    setTimeout(() => {
-      setLastUpdate(new Date());
+    } catch (error) {
+      console.error('Error fetching data:', error);
+    } finally {
       setIsRefreshing(false);
-    }, 1000);
+    }
   };
+
+  // Fetch data on initial load
+  useEffect(() => {
+    fetchData();
+  }, []);
 
   // Auto-refresh every 15 minutes
   useEffect(() => {
     const interval = setInterval(() => {
-      handleRefresh();
+      fetchData();
     }, 15 * 60 * 1000); // 15 minutes in milliseconds
 
     return () => clearInterval(interval);
   }, []);
+
+  const handleRefresh = () => {
+    fetchData();
+  };
 
   const formatLastUpdate = (date) => {
     if (!date) return '';

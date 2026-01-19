@@ -161,6 +161,15 @@ function App() {
     }, 1000);
   };
 
+  // Auto-refresh every 15 minutes
+  useEffect(() => {
+    const interval = setInterval(() => {
+      handleRefresh();
+    }, 15 * 60 * 1000); // 15 minutes in milliseconds
+
+    return () => clearInterval(interval);
+  }, []);
+
   const formatLastUpdate = (date) => {
     if (!date) return '';
     return date.toLocaleTimeString();

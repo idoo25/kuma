@@ -117,6 +117,44 @@ const Icons = {
       <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
     </svg>
   ),
+  Lock: () => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+      <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+    </svg>
+  ),
+  Globe: () => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <circle cx="12" cy="12" r="10"></circle>
+      <line x1="2" y1="12" x2="22" y2="12"></line>
+      <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path>
+    </svg>
+  ),
+  Server: () => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <rect x="2" y="2" width="20" height="8" rx="2" ry="2"></rect>
+      <rect x="2" y="14" width="20" height="8" rx="2" ry="2"></rect>
+      <line x1="6" y1="6" x2="6.01" y2="6"></line>
+      <line x1="6" y1="18" x2="6.01" y2="18"></line>
+    </svg>
+  ),
+  Shield: () => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+    </svg>
+  ),
+  Activity: () => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
+    </svg>
+  ),
+  Info: () => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <circle cx="12" cy="12" r="10"></circle>
+      <line x1="12" y1="16" x2="12" y2="12"></line>
+      <line x1="12" y1="8" x2="12.01" y2="8"></line>
+    </svg>
+  ),
 };
 
 function App() {
@@ -400,9 +438,26 @@ function MonitorDetail({ name, data, calculateUptime, calculateAvgPing }) {
   if (data.length === 0) return null;
 
   const latest = data[0];
-  const uptime = calculateUptime(data);
-  const avgPing = calculateAvgPing(data);
   const currentPing = latest.ping || 0;
+
+  // Use stats from Firebase if available, otherwise calculate locally
+  const stats24h = latest.stats_24h || {
+    uptime_percentage: calculateUptime(data),
+    avg_response_time: calculateAvgPing(data),
+    total_checks: data.length,
+    successful_checks: data.filter(d => d.status === 'up').length
+  };
+
+  const stats30d = latest.stats_30d || stats24h;
+
+  // SSL Certificate info
+  const sslCert = latest.ssl_certificate;
+
+  // DNS info
+  const dnsInfo = latest.dns_info;
+
+  // HTTP Headers
+  const headers = latest.headers;
 
   return (
     <div className="monitor-detail">
@@ -412,7 +467,9 @@ function MonitorDetail({ name, data, calculateUptime, calculateAvgPing }) {
             <span className={`status-dot ${latest.status}`}></span>
             <h3>{name}</h3>
           </div>
-          <div className="monitor-subtitle">{latest.target || 'Ping: 8.8.8.8'}</div>
+          <div className="monitor-subtitle">
+            {latest.monitor_type === 'http' ? latest.target : `Ping: ${latest.target}`}
+          </div>
         </div>
         <div className="monitor-actions">
           <button className="btn-action"><Icons.Pause /> Pause</button>
@@ -461,15 +518,154 @@ function MonitorDetail({ name, data, calculateUptime, calculateAvgPing }) {
         </div>
         <div className="stat-box">
           <div className="stat-label">Avg. Ping (24h)</div>
-          <div className="stat-value-large">{avgPing} ms</div>
+          <div className="stat-value-large">{stats24h.avg_response_time || 0} ms</div>
         </div>
         <div className="stat-box">
           <div className="stat-label">Uptime (24h)</div>
-          <div className="stat-value-large">{uptime}%</div>
+          <div className="stat-value-large">{stats24h.uptime_percentage || 0}%</div>
         </div>
         <div className="stat-box">
           <div className="stat-label">Uptime (30d)</div>
-          <div className="stat-value-large">{uptime}%</div>
+          <div className="stat-value-large">{stats30d.uptime_percentage || 0}%</div>
+        </div>
+      </div>
+
+      {/* Info Cards Grid */}
+      <div className="info-cards-grid">
+        {/* SSL Certificate Info */}
+        {sslCert && (
+          <div className="info-card">
+            <div className="info-card-header">
+              <Icons.Lock />
+              <h4>SSL Certificate</h4>
+              <span className={`info-badge ${sslCert.valid ? 'success' : 'danger'}`}>
+                {sslCert.valid ? 'Valid' : 'Invalid'}
+              </span>
+            </div>
+            <div className="info-card-body">
+              {sslCert.valid ? (
+                <>
+                  <div className="info-row">
+                    <span className="info-label">Subject</span>
+                    <span className="info-value">{sslCert.subject}</span>
+                  </div>
+                  <div className="info-row">
+                    <span className="info-label">Issuer</span>
+                    <span className="info-value">{sslCert.issuer}</span>
+                  </div>
+                  <div className="info-row">
+                    <span className="info-label">Valid From</span>
+                    <span className="info-value">{new Date(sslCert.valid_from).toLocaleDateString()}</span>
+                  </div>
+                  <div className="info-row">
+                    <span className="info-label">Valid To</span>
+                    <span className="info-value">{new Date(sslCert.valid_to).toLocaleDateString()}</span>
+                  </div>
+                  <div className="info-row highlight">
+                    <span className="info-label">Days Remaining</span>
+                    <span className={`info-value ${sslCert.days_remaining < 30 ? 'warning' : sslCert.days_remaining < 7 ? 'danger' : 'success'}`}>
+                      {sslCert.days_remaining} days
+                    </span>
+                  </div>
+                </>
+              ) : (
+                <div className="info-row">
+                  <span className="info-label">Error</span>
+                  <span className="info-value danger">{sslCert.error}</span>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* DNS Info */}
+        {dnsInfo && !dnsInfo.error && (
+          <div className="info-card">
+            <div className="info-card-header">
+              <Icons.Globe />
+              <h4>DNS Information</h4>
+            </div>
+            <div className="info-card-body">
+              <div className="info-row">
+                <span className="info-label">Hostname</span>
+                <span className="info-value">{dnsInfo.hostname}</span>
+              </div>
+              {dnsInfo.ip_addresses && dnsInfo.ip_addresses.length > 0 && (
+                <div className="info-row">
+                  <span className="info-label">IP Addresses</span>
+                  <span className="info-value">
+                    {dnsInfo.ip_addresses.map((ip, i) => (
+                      <span key={i} className="ip-badge">{ip}</span>
+                    ))}
+                  </span>
+                </div>
+              )}
+              {dnsInfo.aliases && dnsInfo.aliases.length > 0 && (
+                <div className="info-row">
+                  <span className="info-label">Aliases</span>
+                  <span className="info-value">{dnsInfo.aliases.join(', ')}</span>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* HTTP Headers */}
+        {headers && (
+          <div className="info-card">
+            <div className="info-card-header">
+              <Icons.Server />
+              <h4>HTTP Headers</h4>
+            </div>
+            <div className="info-card-body">
+              <div className="info-row">
+                <span className="info-label">Server</span>
+                <span className="info-value">{headers.server || 'Unknown'}</span>
+              </div>
+              <div className="info-row">
+                <span className="info-label">Content-Type</span>
+                <span className="info-value">{headers.content_type || 'Unknown'}</span>
+              </div>
+              <div className="info-row">
+                <span className="info-label">Content-Length</span>
+                <span className="info-value">{headers.content_length || '0'} bytes</span>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Statistics Card */}
+        <div className="info-card">
+          <div className="info-card-header">
+            <Icons.Activity />
+            <h4>Statistics (24h)</h4>
+          </div>
+          <div className="info-card-body">
+            <div className="info-row">
+              <span className="info-label">Total Checks</span>
+              <span className="info-value">{stats24h.total_checks || 0}</span>
+            </div>
+            <div className="info-row">
+              <span className="info-label">Successful</span>
+              <span className="info-value success">{stats24h.successful_checks || 0}</span>
+            </div>
+            <div className="info-row">
+              <span className="info-label">Failed</span>
+              <span className="info-value danger">{stats24h.failed_checks || 0}</span>
+            </div>
+            {stats24h.min_response_time !== undefined && (
+              <div className="info-row">
+                <span className="info-label">Min Response</span>
+                <span className="info-value">{stats24h.min_response_time} ms</span>
+              </div>
+            )}
+            {stats24h.max_response_time !== undefined && (
+              <div className="info-row">
+                <span className="info-label">Max Response</span>
+                <span className="info-value">{stats24h.max_response_time} ms</span>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
@@ -483,6 +679,7 @@ function MonitorDetail({ name, data, calculateUptime, calculateAvgPing }) {
               <th>Status</th>
               <th>Date Time</th>
               <th>Message</th>
+              {data.some(d => d.packet_loss !== undefined) && <th>Packet Loss</th>}
             </tr>
           </thead>
           <tbody>
@@ -491,6 +688,9 @@ function MonitorDetail({ name, data, calculateUptime, calculateAvgPing }) {
                 <td><span className={`status-badge ${check.status}`}>{check.status === 'up' ? 'Up' : 'Down'}</span></td>
                 <td>{check.timestamp?.toLocaleString()}</td>
                 <td>{check.message || '200 - OK'}</td>
+                {data.some(d => d.packet_loss !== undefined) && (
+                  <td>{check.packet_loss !== undefined ? `${check.packet_loss}%` : '-'}</td>
+                )}
               </tr>
             ))}
           </tbody>

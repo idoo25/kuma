@@ -269,6 +269,24 @@ function App() {
 
   return (
     <div className="app">
+      {/* Loading Overlay */}
+      {isRefreshing && (
+        <div className="loading-overlay">
+          <div className="loading-content">
+            <div className="loading-spinner">
+              <div className="spinner-ring"></div>
+              <div className="spinner-ring"></div>
+              <div className="spinner-ring"></div>
+            </div>
+            <div className="loading-text">Loading data from Firebase...</div>
+            <div className="loading-dots">
+              <span></span>
+              <span></span>
+              <span></span>
+            </div>
+          </div>
+        </div>
+      )}
       <header className="header">
         <div className="header-left">
           <div className="logo-container">

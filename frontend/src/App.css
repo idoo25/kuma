@@ -180,6 +180,12 @@ body {
   white-space: nowrap;
 }
 
+.cache-indicator {
+  font-size: 0.7rem;
+  opacity: 0.7;
+  font-style: italic;
+}
+
 .btn-refresh {
   background: linear-gradient(135deg, #10b981 0%, #059669 100%);
   color: white;

@@ -157,6 +157,9 @@ const Icons = {
   ),
 };
 
+const CACHE_KEY = 'uptime_kuma_cache';
+const CACHE_DURATION = 15 * 60 * 1000; // 15 minutes
+
 function App() {
   const [monitors, setMonitors] = useState([]);
   const [stats, setStats] = useState({ up: 0, down: 0, maintenance: 0, unknown: 0, pause: 0 });
@@ -165,14 +168,66 @@ function App() {
   const [theme, setTheme] = useState(() => localStorage.getItem('theme') || 'light');
   const [lastUpdate, setLastUpdate] = useState(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isCachedData, setIsCachedData] = useState(false);
+
+  // Load cached data on startup
+  const loadFromCache = () => {
+    try {
+      const cached = localStorage.getItem(CACHE_KEY);
+      if (cached) {
+        const { data, timestamp, lastUpdateTime } = JSON.parse(cached);
+        const age = Date.now() - timestamp;
+
+        // Parse timestamps back to Date objects
+        const parsedData = data.map(item => ({
+          ...item,
+          timestamp: item.timestamp ? new Date(item.timestamp) : null
+        }));
+
+        setMonitors(parsedData);
+        calculateStats(parsedData);
+        setLastUpdate(new Date(lastUpdateTime));
+        setIsCachedData(true);
+
+        if (parsedData.length > 0) {
+          const unique = getUniqueMonitorsFromData(parsedData);
+          setSelectedMonitor(unique[0]?.name);
+        }
+
+        // Return true if cache is still valid (less than 15 min old)
+        return age < CACHE_DURATION;
+      }
+    } catch (error) {
+      console.error('Error loading cache:', error);
+      localStorage.removeItem(CACHE_KEY);
+    }
+    return false;
+  };
+
+  // Save data to cache
+  const saveToCache = (data, updateTime) => {
+    try {
+      const cacheData = {
+        data: data.map(item => ({
+          ...item,
+          timestamp: item.timestamp?.toISOString() || null
+        })),
+        timestamp: Date.now(),
+        lastUpdateTime: updateTime.toISOString()
+      };
+      localStorage.setItem(CACHE_KEY, JSON.stringify(cacheData));
+    } catch (error) {
+      console.error('Error saving cache:', error);
+    }
+  };
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
     localStorage.setItem('theme', theme);
   }, [theme]);
 
-  const fetchData = async () => {
-    setIsRefreshing(true);
+  const fetchData = async (showLoader = true) => {
+    if (showLoader) setIsRefreshing(true);
     try {
       const q = query(collection(db, 'monitors'), orderBy('timestamp', 'desc'), limit(500));
       const snapshot = await getDocs(q);
@@ -183,7 +238,10 @@ function App() {
       }));
       setMonitors(data);
       calculateStats(data);
-      setLastUpdate(new Date());
+      const updateTime = new Date();
+      setLastUpdate(updateTime);
+      setIsCachedData(false);
+      saveToCache(data, updateTime);
       if (data.length > 0 && !selectedMonitor) {
         const unique = getUniqueMonitorsFromData(data);
         setSelectedMonitor(unique[0]?.name);
@@ -191,13 +249,20 @@ function App() {
     } catch (error) {
       console.error('Error fetching data:', error);
     } finally {
-      setIsRefreshing(false);
+      if (showLoader) setIsRefreshing(false);
     }
   };
 
-  // Fetch data on initial load
+  // Load from cache first, then fetch fresh data if needed
   useEffect(() => {
-    fetchData();
+    const cacheValid = loadFromCache();
+    if (cacheValid) {
+      // Cache is valid, fetch in background without loader
+      fetchData(false);
+    } else {
+      // No cache or expired, fetch with loader
+      fetchData(true);
+    }
   }, []);
 
   // Auto-refresh every 15 minutes
@@ -314,6 +379,7 @@ function App() {
           {lastUpdate && (
             <span className="last-update">
               Last update: {formatLastUpdate(lastUpdate)}
+              {isCachedData && <span className="cache-indicator"> (cached)</span>}
             </span>
           )}
           <button
